@@ -28,7 +28,7 @@ def get_tasks():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        # check if username already exists in DB
+        # check if username already exists in db
         existing_user = mongo.db.users.find_one(
             {"username": request.form.get("username").lower()})
 
@@ -60,13 +60,12 @@ def login():
         if existing_user:
             # ensure hashed password matches user input
             if check_password_hash(
-                existing_user["password"], request.form.get("password")):
-                    session["user"] = request.form.get("username").lower()
-                    flash("Welcome, {}".format(
-                        request.form.get("username")))
-                    return redirect(url_for(
-                        "profile", username=session["user"]))
-
+                    existing_user["password"], request.form.get("password")):
+                        session["user"] = request.form.get("username").lower()
+                        flash("Welcome, {}".format(
+                            request.form.get("username")))
+                        return redirect(url_for(
+                            "profile", username=session["user"]))
             else:
                 # invalid password match
                 flash("Incorrect Username and/or Password")
@@ -82,7 +81,7 @@ def login():
 
 @app.route("/profile/<username>", methods=["GET", "POST"])
 def profile(username):
-    # Grab the sessions user's username from db
+    # grab the session user's username from db
     username = mongo.db.users.find_one(
         {"username": session["user"]})["username"]
 
@@ -94,16 +93,12 @@ def profile(username):
 
 @app.route("/logout")
 def logout():
-    # remove user from session cokkies
+    # remove user from session cookie
     flash("You have been logged out")
     session.pop("user")
     return redirect(url_for("login"))
 
-# Add tasks typed out into the task section
-# convert into a dictionary request.form.to_dict()
-# "task_description": request.form.getlist("task_desciption")  
-# .getlist is used to a list on ingredients in a recipe
-# "created_by": session["user"] add user into the task displayed
+
 @app.route("/add_task", methods=["GET", "POST"])
 def add_task():
     if request.method == "POST":
@@ -124,8 +119,21 @@ def add_task():
     return render_template("add_task.html", categories=categories)
 
 
-@app.route("/edit_task/<task_id>", methods=["GET", "PSOT"])
+@app.route("/edit_task/<task_id>", methods=["GET", "POST"])
 def edit_task(task_id):
+    if request.method == "POST":
+        is_urgent = "on" if request.form.get("is_urgent") else "off"
+        submit = {
+            "category_name": request.form.get("category_name"),
+            "task_name": request.form.get("task_name"),
+            "task_description": request.form.get("task_description"),
+            "is_urgent": is_urgent,
+            "due_date": request.form.get("due_date"),
+            "created_by": session["user"]
+        }
+        mongo.db.tasks.update({"_id": ObjectId(task_id)}, submit)
+        flash("Task Successfully Updated")
+
     task = mongo.db.tasks.find_one({"_id": ObjectId(task_id)})
     categories = mongo.db.categories.find().sort("category_name", 1)
     return render_template("edit_task.html", task=task, categories=categories)
